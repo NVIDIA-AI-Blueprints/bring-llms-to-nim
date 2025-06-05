@@ -1,6 +1,27 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 <h2><img align="center" src="https://github.com/user-attachments/assets/cbe0d62f-c856-4e0b-b3ee-6184b7c4d96f">NVIDIA AI Blueprint: Bring Your LLM to NIM</h2>
 
 Deploy any Large Language Model (LLM) using NVIDIA NIM with optimized performance and flexibility across multiple inference backends.
+
+
+> [!IMPORTANT]
+> NVIDIA cannot guarantee the security of any models hosted on non-NVIDIA systems such as HuggingFace. Malicious or insecure models can result in serious security risks up to and including full remote code execution. We strongly recommend that before attempting to load it you manually verify the safety of any model not provided by NVIDIA, through such mechanisms as a) ensuring that the model weights are serialized using the safetensors format, b) conducting a manual review of any model or inference code to ensure that it is free of obfuscated or malicious code, and c) validating the signature of the model, if available, to ensure that it comes from a trusted source and has not been modified.
 
 ### Quickstart
 1. **Set up prerequisites**: Obtain NGC API Key and Hugging Face Token
