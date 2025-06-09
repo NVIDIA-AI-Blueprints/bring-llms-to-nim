@@ -28,7 +28,7 @@ Deploy any Large Language Model (LLM) using NVIDIA NIM with optimized performanc
 2. **Deploy a model**: Run the following command to deploy Codestral-22B:
    ```bash
    docker run -it --rm \
-     --name=Universal-LLM-NIM \
+     --name=LLM-NIM \
      --runtime=nvidia \
      --gpus all \
      --shm-size=16GB \
@@ -59,7 +59,7 @@ Key capabilities:
 - OpenAI-compatible REST API
 
 #### Software Components
-- **NVIDIA NIM Universal LLM Container**: `nvcr.io/nvidian/nim-llm-dev/universal-nim:1.11.0.rc4`
+- **NVIDIA NIM LLM Container**: `nvcr.io/nvidian/nim-llm-dev/universal-nim:1.11.0.rc4`
 - **Supported Inference Backends**:
   - TensorRT-LLM (high performance)
   - vLLM (versatile deployment)
@@ -113,7 +113,7 @@ Example completion request:
 **Option 1: Deploy from Hugging Face Hub**
 ```bash
 docker run -it --rm \
-  --name=Universal-LLM-NIM \
+  --name=LLM-NIM \
   --runtime=nvidia \
   --gpus all \
   --shm-size=16GB \
@@ -130,7 +130,7 @@ docker run -it --rm \
 **Option 2: Deploy from Local Model**
 ```bash
 docker run -it --rm \
-  --name=Universal-LLM-NIM \
+  --name=LLM-NIM \
   --runtime=nvidia \
   --gpus all \
   --shm-size=16GB \
@@ -160,7 +160,7 @@ Specify inference backend using `NIM_MODEL_PROFILE`:
 #### Example Custom Deployment
 ```bash
 docker run -it --rm \
-  --name=Universal-LLM-NIM \
+  --name=LLM-NIM \
   --runtime=nvidia \
   --gpus all \
   --shm-size=16GB \
