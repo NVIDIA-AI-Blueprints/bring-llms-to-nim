@@ -17,38 +17,69 @@ limitations under the License.
 
 <h2><img align="center" src="https://github.com/user-attachments/assets/cbe0d62f-c856-4e0b-b3ee-6184b7c4d96f">NVIDIA AI Blueprint: Bring Your LLM to NIM</h2>
 
-Deploy any Large Language Model (LLM) using NVIDIA NIM with optimized performance and flexibility across multiple inference backends.
+Deploy your own Large Language Model (LLM) using NVIDIA NIM - a powerful service that automatically optimizes your model for maximum performance on NVIDIA GPUs.
 
+## What is NIM?
+
+NVIDIA NIM is a containerized solution that:
+- **Automatically optimizes** your LLM for the best performance
+- **Handles all the complexity** of model deployment and serving
+- **Provides an OpenAI-compatible API** for easy integration
+- **Supports multiple model formats** without manual conversion
+
+## What You'll Learn
+
+This repository contains three hands-on notebooks showing different deployment approaches:
+
+### 📘 [Notebook 1: Deploy HuggingFace Safetensors](deploy/1_HuggingFace_Safetensors.ipynb)
+**Best for:** Quick deployment of popular models from HuggingFace
+- Deploy models directly from HuggingFace with a single command
+- Download and deploy from local storage for offline use
+- Choose between TensorRT-LLM and vLLM backends
+
+### 📗 [Notebook 2: Deploy TensorRT-LLM Checkpoints and Engines](deploy/2_TRTLLM_Checkpoints_Engines.ipynb)
+**Best for:** Maximum performance with custom optimization
+- Convert HuggingFace models to TensorRT-LLM format
+- Compile optimized engines for production deployment
+- Fine-tune performance parameters
+
+### 📙 [Notebook 3: Deploy GGUF Checkpoints](deploy/3_GGUF_Checkpoints.ipynb)
+**Best for:** Memory-efficient deployment with quantized models
+- Deploy pre-quantized GGUF models (4-bit, 8-bit, etc.)
+- Reduce GPU memory requirements significantly
+- Handle external configuration requirements
 
 > [!IMPORTANT]
 > NVIDIA cannot guarantee the security of any models hosted on non-NVIDIA systems such as HuggingFace. Malicious or insecure models can result in serious security risks up to and including full remote code execution. We strongly recommend that before attempting to load it you manually verify the safety of any model not provided by NVIDIA, through such mechanisms as a) ensuring that the model weights are serialized using the safetensors format, b) conducting a manual review of any model or inference code to ensure that it is free of obfuscated or malicious code, and c) validating the signature of the model, if available, to ensure that it comes from a trusted source and has not been modified.
 
-### Quickstart
-1. **Set up prerequisites**: Obtain NGC API Key and Hugging Face Token
-2. **Deploy a model**: Run the following command to deploy Codestral-22B:
-   ```bash
-   docker run -it --rm \
-     --name=LLM-NIM \
-     --runtime=nvidia \
-     --gpus all \
-     --shm-size=16GB \
-     -e HF_TOKEN=<your_hf_token> \
-     -e NIM_MODEL_NAME="hf://mistralai/Codestral-22B-v0.1" \
-     -e NIM_SERVED_MODEL_NAME="mistralai/Codestral-22B-v0.1" \
-     -v "$HOME/.cache/nim:/opt/nim/.cache" \
-     -u $(id -u) \
-     -p 8000:8000 \
-     -d \
-     nvcr.io/nvidian/nim-llm-dev/universal-nim:1.11.0.rc4
-   ```
-3. **Test the deployment**:
-   ```bash
-   curl -X POST "http://localhost:8000/v1/completions" \
-     -H "Content-Type: application/json" \
-     -d '{"model": "mistralai/Codestral-22B-v0.1", "prompt": "Write a Python function to compute fibonacci", "max_tokens": 250}'
-   ```
+## What You'll Learn
+- **What is NIM?** NVIDIA Inference Microservice (NIM) is a containerized solution that automatically optimizes LLM deployment
+- **Why use NIM?** Handles model optimization, backend selection, and scaling automatically
+- **What you need to know:** Basic Docker commands and Python. No prior LLM deployment experience required.
 
-### Overview
+## Quick Start: Deploy Your First Model in 3 Minutes
+
+### Step 1: Pull the NIM container
+```bash
+docker pull nvcr.io/nvidia/nim/nim-llm:1.11.0
+```
+
+### Step 2: Deploy a small model
+```bash
+docker run -it --rm --name=my-first-nim \
+  --runtime=nvidia --gpus all \
+  -p 8000:8000 \
+  nvcr.io/nvidia/nim/nim-llm:1.11.0 \
+  -e NIM_MODEL_NAME="hf://Qwen/Qwen2.5-0.5B"
+```
+
+### Step 3: Test it
+```bash
+curl http://localhost:8000/v1/completions \
+  -d '{"model": "Qwen/Qwen2.5-0.5B", "prompt": "Hello world"}'
+```
+
+## Overview
 This blueprint demonstrates how to deploy almost any Large Language Model using NVIDIA NIM (NVIDIA Inference Microservice). NIM provides a streamlined way to deploy and serve LLMs with optimized performance, handling model analysis, backend selection, and configuration automatically.
 
 Key capabilities:
@@ -98,81 +129,7 @@ Example completion request:
 - **NGC API Key**: Required for pulling NIM containers ([Generate here](https://docs.nvidia.com/ngc/gpu-cloud/ngc-user-guide/index.html#generating-api-key))
 - **Hugging Face Token**: Required for downloading models from Hugging Face Hub
 - **Docker**: With NVIDIA Container Runtime installed
-- **NVIDIA Driver**: Version 535 or higher
 
-**Setup Steps**:
-1. Install NVIDIA drivers and Docker with NVIDIA runtime
-2. Log into NGC registry:
-   ```bash
-   echo "$NGC_API_KEY" | docker login nvcr.io -u '$oauthtoken' --password-stdin
-   ```
-3. Set environment variables for API keys
-
-#### Deployment Options
-
-**Option 1: Deploy from Hugging Face Hub**
-```bash
-docker run -it --rm \
-  --name=LLM-NIM \
-  --runtime=nvidia \
-  --gpus all \
-  --shm-size=16GB \
-  -e HF_TOKEN=$HF_TOKEN \
-  -e NIM_MODEL_NAME="hf://model-repo/model-name" \
-  -e NIM_SERVED_MODEL_NAME="model-name" \
-  -v "$HOME/.cache/nim:/opt/nim/.cache" \
-  -u $(id -u) \
-  -p 8000:8000 \
-  -d \
-  nvcr.io/nvidian/nim-llm-dev/universal-nim:1.11.0.rc4
-```
-
-**Option 2: Deploy from Local Model**
-```bash
-docker run -it --rm \
-  --name=LLM-NIM \
-  --runtime=nvidia \
-  --gpus all \
-  --shm-size=16GB \
-  -e NIM_MODEL_NAME="/opt/models/model-name" \
-  -e NIM_SERVED_MODEL_NAME="model-name" \
-  -v "/path/to/local/model:/opt/models/model-name" \
-  -v "$HOME/.cache/nim:/opt/nim/.cache" \
-  -u $(id -u) \
-  -p 8000:8000 \
-  -d \
-  nvcr.io/nvidian/nim-llm-dev/universal-nim:1.11.0.rc4
-```
-
-### Customization
-
-#### Backend Selection
-Specify inference backend using `NIM_MODEL_PROFILE`:
-- `tensorrt_llm`: High-performance TensorRT-LLM backend
-- `vllm`: Versatile vLLM backend
-
-#### Performance Tuning Parameters
-- `NIM_TENSOR_PARALLEL_SIZE`: Number of GPUs for tensor parallelism
-- `NIM_MAX_BATCH_SIZE`: Maximum batch size for inference
-- `NIM_MAX_INPUT_LENGTH`: Maximum input sequence length (default: 2048)
-- `NIM_MAX_OUTPUT_LENGTH`: Maximum output sequence length (default: 512)
-
-#### Example Custom Deployment
-```bash
-docker run -it --rm \
-  --name=LLM-NIM \
-  --runtime=nvidia \
-  --gpus all \
-  --shm-size=16GB \
-  -e NIM_MODEL_PROFILE="tensorrt_llm" \
-  -e NIM_TENSOR_PARALLEL_SIZE=2 \
-  -e NIM_MAX_BATCH_SIZE=16 \
-  -e NIM_MAX_INPUT_LENGTH=2048 \
-  -e NIM_MAX_OUTPUT_LENGTH=512 \
-  # ... other parameters
-```
-
-For detailed examples and code samples, see the [deployment notebook](deploy/1_Deploy_NIM.ipynb).
 
 
 
