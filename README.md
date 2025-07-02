@@ -69,8 +69,8 @@ docker pull nvcr.io/nvidia/nim/nim-llm:1.11.0
 docker run -it --rm --name=my-first-nim \
   --runtime=nvidia --gpus all \
   -p 8000:8000 \
-  nvcr.io/nvidia/nim/nim-llm:1.11.0 \
-  -e NIM_MODEL_NAME="hf://Qwen/Qwen2.5-0.5B"
+  -e NIM_MODEL_NAME="hf://Qwen/Qwen2.5-0.5B" \
+  nvcr.io/nvidia/nim/nim-llm:1.11.0
 ```
 
 ### Step 3: Test it
