@@ -90,7 +90,7 @@ Key capabilities:
 - OpenAI-compatible REST API
 
 #### Software Components
-- **NVIDIA NIM LLM Container**: `nvcr.io/nvidian/nim-llm-dev/universal-nim:1.11.0.rc4`
+- **NVIDIA NIM LLM Container**: `nvcr.io/nvidia/nim/nim-llm:1.11.0`
 - **Supported Inference Backends**:
   - TensorRT-LLM (high performance)
   - vLLM (versatile deployment)
