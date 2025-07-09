@@ -61,7 +61,7 @@ This repository contains three hands-on notebooks showing different deployment a
 
 ### Step 1: Pull the NIM container
 ```bash
-docker pull nvcr.io/nvidia/nim/nim-llm:1.11.0
+docker pull nvcr.io/nvidia/nim/nim-llm:latest
 ```
 
 ### Step 2: Deploy a small model
@@ -70,7 +70,7 @@ docker run -it --rm --name=my-first-nim \
   --runtime=nvidia --gpus all \
   -p 8000:8000 \
   -e NIM_MODEL_NAME="hf://Qwen/Qwen2.5-0.5B" \
-  nvcr.io/nvidia/nim/nim-llm:1.11.0
+  nvcr.io/nvidia/nim/nim-llm:latest
 ```
 
 ### Step 3: Test it
@@ -90,7 +90,7 @@ Key capabilities:
 - OpenAI-compatible REST API
 
 #### Software Components
-- **NVIDIA NIM LLM Container**: `nvcr.io/nvidia/nim/nim-llm:1.11.0`
+- **NVIDIA NIM LLM Container**: `nvcr.io/nvidia/nim/nim-llm:latest`
 - **Supported Inference Backends**:
   - TensorRT-LLM (high performance)
   - vLLM (versatile deployment)
