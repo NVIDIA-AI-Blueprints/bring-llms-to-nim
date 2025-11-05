@@ -1,0 +1,193 @@
+name: Run Notebooks
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-nim-notebooks:
+    runs-on: arc-runners-org-nvidia-ai-bp-2-gpu
+    env:
+      PYTHON_VERSION: 3.12
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      NGC_API_KEY: ${{ secrets.NGC_API_KEY }}
+    steps:  
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Get System Info
+        run: |
+          echo "===================== System Info ====================="
+          more /etc/os-release
+          nvidia-smi || echo "nvidia-smi not available"
+          docker version
+          python --version
+
+      - name: Install ipykernel
+        run: |          
+          echo "Installing ipykernel ..."
+          python -m pip install --upgrade pip
+          pip install ipykernel
+          echo "Installing Python kernel..."
+          python -m ipykernel install --user --name python3 --display-name "Python 3"
+          
+          echo "Verifying kernel installation..."
+          jupyter kernelspec list
+
+      - name: Login to NGC
+        run: |
+          # Check if NGC_API_KEY is set
+          if [ -z "$NGC_API_KEY" ]; then
+            echo "❌ Error: NGC_API_KEY is not set!"
+            echo "Please configure NGC_API_KEY in GitHub Secrets:"
+            exit 1
+          fi
+          
+          echo "Logging in to NGC..."
+          echo "$NGC_API_KEY" | docker login nvcr.io -u '$oauthtoken' --password-stdin
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Successfully logged in to NGC"
+          else
+            echo "❌ Failed to login to NGC"
+            exit 1
+          fi
+
+      - name: Run Notebooks
+        run: |
+          # Function to run a single notebook
+          run_notebook() {
+            local NOTEBOOK_PATH="$1"
+            local FIX_TRTLLM_PATH="${2:-}"
+            
+            local NOTEBOOK_DIR=$(dirname "$NOTEBOOK_PATH")
+            local NOTEBOOK_NAME=$(basename "$NOTEBOOK_PATH" .ipynb)
+            local TEMP_NOTEBOOK="${NOTEBOOK_DIR}/${NOTEBOOK_NAME}_temp.ipynb"
+            local OUTPUT_NOTEBOOK="${NOTEBOOK_DIR}/${NOTEBOOK_NAME}_result.ipynb"
+            
+            echo "================================"
+            echo "Running: $NOTEBOOK_NAME"
+            echo "================================"
+            
+            # Create work directory
+            local WORK_DIR="$(pwd)/work"
+            mkdir -p "$WORK_DIR"
+            
+            # Prepare notebook: replace paths
+            sed "s|/ephemeral|$WORK_DIR|g" "$NOTEBOOK_PATH" > "$TEMP_NOTEBOOK"
+
+            # For the first notebook, add sleep after docker stop commands
+            if [[ "$NOTEBOOK_NAME" == "1_HuggingFace_Safetensors" ]]; then
+              echo "Adding sleep after docker stop commands to $NOTEBOOK_NAME..."
+              sed -i "s/\"!docker stop \\\$CONTAINER_NAME 2>\/dev\/null || echo \\\\\"Container already stopped\\\\\"\"/\"!docker stop \$CONTAINER_NAME 2>\/dev\/null || echo \\\\\"Container already stopped\\\\\"\\\\n\",\\n    \"!sleep 60\"/g" "$TEMP_NOTEBOOK"
+              echo "✅ Added sleep commands"
+            fi
+            
+            # Run notebook with papermill
+            papermill "$TEMP_NOTEBOOK" "$OUTPUT_NOTEBOOK" -k python3 --log-output --log-level DEBUG
+            local EXIT_CODE=$?
+            
+            # Clean up
+            rm -f "$TEMP_NOTEBOOK"
+            
+            # Check results
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "❌ Notebook execution failed"
+              return 1
+            fi
+            
+            if [ ! -f "$OUTPUT_NOTEBOOK" ]; then
+              echo "❌ Output notebook not created"
+              return 1
+            fi
+            
+            echo "✅ Completed: $NOTEBOOK_NAME"
+            echo ""
+            return 0
+          }
+          
+          # Run all notebooks
+          run_notebook "deploy/1_HuggingFace_Safetensors.ipynb" || exit 1
+          run_notebook "deploy/2_TRTLLM_Checkpoints_Engines.ipynb" "fix_trtllm_path" || exit 1
+          run_notebook "deploy/3_GGUF_Checkpoints.ipynb" || exit 1
+
+      - name: Convert results to HTML format
+        if: always()
+        run: |
+          echo "Converting notebooks to HTML..."
+          for notebook in deploy/*_result.ipynb; do
+            if [ -f "$notebook" ]; then
+              jupyter nbconvert --to html "$notebook"
+              echo "✅ Converted $(basename $notebook)"
+            fi
+          done
+
+      - name: Run Test Code
+        if: always()
+        run: |   
+          # Check if the HTML files exist before running tests
+          if [ ! -f "./deploy/1_HuggingFace_Safetensors_result.html" ]; then
+            echo "Warning: 1_HuggingFace_Safetensors_result.html not found"
+          fi
+          if [ ! -f "./deploy/2_TRTLLM_Checkpoints_Engines_result.html" ]; then
+            echo "Warning: 2_TRTLLM_Checkpoints_Engines_result.html not found"
+          fi
+          if [ ! -f "./deploy/3_GGUF_Checkpoints_result.html" ]; then
+            echo "Warning: 3_GGUF_Checkpoints_result.html not found"
+          fi
+          
+          # Run the test and capture the exit code
+          docker run --rm \
+            -v ./deploy/1_HuggingFace_Safetensors_result.html:/app/input/bring_llms_to_nim/1_HuggingFace_Safetensors_result.html \
+            -v ./deploy/2_TRTLLM_Checkpoints_Engines_result.html:/app/input/bring_llms_to_nim/2_TRTLLM_Checkpoints_Engines_result.html \
+            -v ./deploy/3_GGUF_Checkpoints_result.html:/app/input/bring_llms_to_nim/3_GGUF_Checkpoints_result.html \
+            -v "$(pwd):/workspace" \
+            nvcr.io/rw983xdqtcdp/auto_test_team/blueprint-github-test-image:latest \
+            pytest -m bring_llms_to_nim --disable-warnings --html=/workspace/bring_llms_to_nim_test.html --self-contained-html
+
+      - name: Upload notebook and test results as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nim-notebooks-results
+          path: |
+             deploy/1_HuggingFace_Safetensors_result.html
+             deploy/2_TRTLLM_Checkpoints_Engines_result.html
+             deploy/3_GGUF_Checkpoints_result.html
+             bring_llms_to_nim_test.html
+          retention-days: 14 
+
+      - name: Cleanup Docker resources and work directory
+        if: always()
+        run: |
+          echo "🧹 Cleaning up workflow resources..."
+          
+          # Remove test image
+          docker rmi nvcr.io/rw983xdqtcdp/auto_test_team/blueprint-github-test-image:latest 2>/dev/null || true
+          
+          # Remove any dangling images that might have been created during notebook execution
+          docker image prune -f
+          
+          # Remove work directory if it exists
+          if [ -d "work" ]; then
+            echo "Removing work directory..."
+            rm -rf work
+          fi
+          
+          # Remove any temporary notebook files
+          echo "Cleaning up temporary notebook files..."
+          rm -f deploy/*_temp.ipynb
+          
+          echo "✅ Workflow cleanup completed"
+
