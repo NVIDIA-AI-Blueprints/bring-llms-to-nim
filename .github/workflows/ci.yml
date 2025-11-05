@@ -86,6 +86,13 @@ jobs:
             
             # Prepare notebook: replace paths
             sed "s|/ephemeral|$WORK_DIR|g" "$NOTEBOOK_PATH" > "$TEMP_NOTEBOOK"
+
+            # For the first notebook, add sleep after docker stop commands
+            if [[ "$NOTEBOOK_NAME" == "1_HuggingFace_Safetensors" ]]; then
+              echo "Adding sleep after docker stop commands to $NOTEBOOK_NAME..."
+              sed -i "s/\"!docker stop \\\$CONTAINER_NAME 2>\/dev\/null || echo \\\\\"Container already stopped\\\\\"\"/\"!docker stop \$CONTAINER_NAME 2>\/dev\/null || echo \\\\\"Container already stopped\\\\\"\\\\n\",\\n    \"!sleep 60\"/g" "$TEMP_NOTEBOOK"
+              echo "✅ Added sleep commands"
+            fi
             
             # Run notebook with papermill
             papermill "$TEMP_NOTEBOOK" "$OUTPUT_NOTEBOOK" -k python3 --log-output --log-level DEBUG
